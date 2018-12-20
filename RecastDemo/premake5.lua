@@ -181,6 +181,36 @@ project "RecastDemo"
 			"SDL2.framework",
 			"Cocoa.framework",
 		}
+		
+project "Convertor"
+	language "C++"
+	kind "ConsoleApp"
+	includedirs {
+		"../Convertor/Include",
+		"../DebugUtils/Include",
+		"../Detour/Include",
+		"../DetourCrowd/Include",
+		"../DetourTileCache/Include",
+		"../Recast/Include",
+		"../RecastDemo/Include"
+	}
+	files	{ 
+		"../Convertor/Include/*.h",
+		"../Convertor/Source/*.cpp"
+	}
+
+	-- project dependencies
+	links { 
+		"DebugUtils",
+		"Detour",
+		"DetourCrowd",
+		"DetourTileCache",
+		"Recast",
+		"RecastDemo"
+	}
+
+	-- distribute executable in RecastDemo/Bin directory
+	targetdir "Bin"
 
 project "Tests"
 	language "C++"

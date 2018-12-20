@@ -8,6 +8,9 @@
 *.pdb
 *.so
 *.idb
+*.bsc
+*.bin
+*.vcxproj*
 
 ## Linux exes have no extension
 RecastDemo/Bin/RecastDemo
@@ -15,6 +18,7 @@ RecastDemo/Bin/Tests
 
 # Build directory
 RecastDemo/Build
+Convertor/Debug
 
 # Ignore meshes
 RecastDemo/Bin/Meshes/*

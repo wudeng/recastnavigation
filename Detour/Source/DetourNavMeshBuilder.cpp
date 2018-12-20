@@ -347,7 +347,7 @@ bool dtCreateNavMeshData(dtNavMeshCreateParams* params, unsigned char** outData,
 					offMeshConClass[i*2+0] = 0;
 			}
 
-			// Cound how many links should be allocated for off-mesh connections.
+			// Count how many links should be allocated for off-mesh connections.
 			if (offMeshConClass[i*2+0] == 0xff)
 				offMeshConLinkCount++;
 			if (offMeshConClass[i*2+1] == 0xff)

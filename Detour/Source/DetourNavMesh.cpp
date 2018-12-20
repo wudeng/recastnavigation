@@ -64,6 +64,7 @@ inline bool overlapSlabs(const float* amin, const float* amax,
 	return false;
 }
 
+// Return the proper slab coordinate value depending on the 'side' value.
 static float getSlabCoord(const float* va, const int side)
 {
 	if (side == 0 || side == 4)
@@ -73,6 +74,7 @@ static float getSlabCoord(const float* va, const int side)
 	return 0;
 }
 
+// Find the slab endpoints based off of the 'side' value.
 static void calcSlabEndPoints(const float* va, const float* vb, float* bmin, float* bmax, const int side)
 {
 	if (side == 0 || side == 4)
@@ -297,6 +299,7 @@ const dtNavMeshParams* dtNavMesh::getParams() const
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
+// Search for neighbor polygons in the tile.
 int dtNavMesh::findConnectingPolys(const float* va, const float* vb,
 								   const dtMeshTile* tile, int side,
 								   dtPolyRef* con, float* conarea, int maxcon) const

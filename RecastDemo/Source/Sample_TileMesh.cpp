@@ -730,11 +730,11 @@ void Sample_TileMesh::buildAllTiles()
 	const float* bmin = m_geom->getNavMeshBoundsMin();
 	const float* bmax = m_geom->getNavMeshBoundsMax();
 	int gw = 0, gh = 0;
-	rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);
-	const int ts = (int)m_tileSize;
-	const int tw = (gw + ts-1) / ts;
-	const int th = (gh + ts-1) / ts;
-	const float tcs = m_tileSize*m_cellSize;
+	rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);	// gw、gh分别表示x轴z轴上有多少个cell单元
+	const int ts = (int)m_tileSize;		// 每个正方形tile有多少个cell单元
+	const int tw = (gw + ts-1) / ts;	// x轴有多少个tile
+	const int th = (gh + ts-1) / ts;	// z轴有多少个tile
+	const float tcs = m_tileSize*m_cellSize; // tile的长度，wu
 
 	
 	// Start the build process.
@@ -742,7 +742,7 @@ void Sample_TileMesh::buildAllTiles()
 
 	for (int y = 0; y < th; ++y)
 	{
-		for (int x = 0; x < tw; ++x)
+		for (int x = 0; x < tw; ++x) // 遍历每个tile
 		{
 			m_lastBuiltTileBmin[0] = bmin[0] + x*tcs;
 			m_lastBuiltTileBmin[1] = bmin[1];
@@ -750,10 +750,11 @@ void Sample_TileMesh::buildAllTiles()
 			
 			m_lastBuiltTileBmax[0] = bmin[0] + (x+1)*tcs;
 			m_lastBuiltTileBmax[1] = bmax[1];
-			m_lastBuiltTileBmax[2] = bmin[2] + (y+1)*tcs;
+			m_lastBuiltTileBmax[2] = bmin[2] + (y+1)*tcs;//计算这个tile的范围，wu
 			
 			int dataSize = 0;
-			unsigned char* data = buildTileMesh(x, y, m_lastBuiltTileBmin, m_lastBuiltTileBmax, dataSize);
+			unsigned char* data = buildTileMesh(x, y, m_lastBuiltTileBmin, m_lastBuiltTileBmax, dataSize); // 为当前tile计算导航网格信息
+			// 将计算的信息加入导航网格
 			if (data)
 			{
 				// Remove any previous data (navmesh owns and deletes the data).
@@ -792,6 +793,7 @@ void Sample_TileMesh::removeAllTiles()
 }
 
 
+// 计算一个tile的导航网格
 unsigned char* Sample_TileMesh::buildTileMesh(const int tx, const int ty, const float* bmin, const float* bmax, int& dataSize)
 {
 	if (!m_geom || !m_geom->getMesh() || !m_geom->getChunkyMesh())
@@ -812,13 +814,13 @@ unsigned char* Sample_TileMesh::buildTileMesh(const int tx, const int ty, const 
 		
 	// Init build configuration from GUI
 	memset(&m_cfg, 0, sizeof(m_cfg));
-	m_cfg.cs = m_cellSize;
-	m_cfg.ch = m_cellHeight;
+	m_cfg.cs = m_cellSize;	// xz
+	m_cfg.ch = m_cellHeight;	// y
 	m_cfg.walkableSlopeAngle = m_agentMaxSlope;
 	m_cfg.walkableHeight = (int)ceilf(m_agentHeight / m_cfg.ch);
 	m_cfg.walkableClimb = (int)floorf(m_agentMaxClimb / m_cfg.ch);
 	m_cfg.walkableRadius = (int)ceilf(m_agentRadius / m_cfg.cs);
-	m_cfg.maxEdgeLen = (int)(m_edgeMaxLen / m_cellSize);
+	m_cfg.maxEdgeLen = (int)(m_edgeMaxLen / m_cellSize); // 最长的边能容下的格子数
 	m_cfg.maxSimplificationError = m_edgeMaxError;
 	m_cfg.minRegionArea = (int)rcSqr(m_regionMinSize);		// Note: area = size*size
 	m_cfg.mergeRegionArea = (int)rcSqr(m_regionMergeSize);	// Note: area = size*size

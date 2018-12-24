@@ -10,6 +10,9 @@
 #include "UnityNavMeshLoader.h"
 #include "DetourNavMeshQuery.h"
 
+static float ts = DEFAULT_TILE_SIZE;
+static int tsc = 0;
+
 
 int hexval(char ch) {
 	if (ch >= '0' && ch <= '9') {
@@ -231,9 +234,22 @@ bool addTile(AssetMeshHeader *h, dtParam *param, dtNavMesh *mesh) {
 	return true;
 }
 
+void update_ts(float sz) {
+	//ts = ts > sz ? ts : sz;
+	if (tsc == 0) {
+		ts = sz;
+		tsc = 1;
+	}
+	else {
+		tsc += (ts == sz) ? 1 : 0;
+	}
+}
+
 void parseTile(dtNavMesh *mesh, char *buf, int len = 0) {
 	AssetMeshHeader *header = (AssetMeshHeader *)buf;
-	/* printf("version = %d\n", header->version);
+
+	/*
+	printf("version = %d\n", header->version);
 	printf("x = %d, y = %d\n", header->x, header->y);
 	printf("userId = %d\n", header->userId);
 	printf("polyCount = %d\n", header->polyCount);
@@ -244,11 +260,14 @@ void parseTile(dtNavMesh *mesh, char *buf, int len = 0) {
 	printf("bvNodeCount = %d\n", header->bvNodeCount);
 	printf("bmin = %f, %f, %f\n", header->bmin[0], header->bmin[1], header->bmin[2]);
 	printf("bmax = %f, %f, %f\n", header->bmax[0], header->bmax[1], header->bmax[2]);
+	printf("tileSize = %f, %d\n", ts, tsc);
+	printf("bvQuantFactor = %f\n", header->bvQuantFactor);
+	//rcVmin(orig, header->bmin);*/
+
 	float w = header->bmax[0] - header->bmin[0];
-	float h = header->bmax[0] - header->bmin[0];
-	printf("tilewidth, tileHeight = %f, %f, %f, %d\n", w, h, header->bmin[0] / DEFAULT_TILE_SIZE, header->x);
-	printf("bvQuantFactor = %f\n", header->bvQuantFactor);*/
-	//rcVmin(orig, header->bmin);
+	float h = header->bmax[2] - header->bmin[2];
+	float sz = (w > h) ? w : h;
+	update_ts(sz);
 
 	// Calculate data size
 	const int headerSize = dtAlign4(sizeof(AssetMeshHeader));
@@ -282,6 +301,12 @@ void parseTile(dtNavMesh *mesh, char *buf, int len = 0) {
 	param.bvTree = navBvtree;
 
 	addTile(header, &param, mesh);	
+}
+
+void setTileSize(dtNavMesh *nav) {
+	dtNavMeshParams *pa = (dtNavMeshParams *)nav->getParams();
+	pa->tileWidth = ts;
+	pa->tileHeight = ts;
 }
 
 
@@ -335,8 +360,8 @@ bool UnityNavMeshLoader::loadText(std::string filepath) {
 	m_walkableHeight = (m_walkableHeight == 0) ? 2.0f : m_walkableHeight;
 
 	dtNavMeshParams params;
-	params.tileWidth = m_tileSize;
-	params.tileHeight = m_tileSize;
+	//params.tileWidth = m_tileSize;
+	//params.tileHeight = m_tileSize;
 	rcVcopy(params.orig, m_orig);
 
 	int tileBits = rcMin((int)ilog2(nextPow2(m_maxTile)), 14);
@@ -352,6 +377,9 @@ bool UnityNavMeshLoader::loadText(std::string filepath) {
 		printf("str size = %u, binary size = %d\n", (int)m_MeshData[i].size(), len);
 		parseTile(m_navMesh, row, len);
 	}
+	setTileSize(m_navMesh);
+	printf("tileSize = %f, tsc/tiles = %d/%d\n", ts, tsc, m_maxTile);
+
 
 	delete[] row;
 	row = NULL;
@@ -380,11 +408,11 @@ bool UnityNavMeshLoader::loadBinary(std::string filepath) {
 
 	m_maxTile = index.size();
 	m_cellSize = DEFAULT_CELL_SIZE;
-	m_tileSize = DEFAULT_TILE_SIZE;
+	//m_tileSize = DEFAULT_TILE_SIZE;
 
 	dtNavMeshParams params;
-	params.tileWidth = m_tileSize;
-	params.tileHeight = m_tileSize;
+	//params.tileWidth = m_tileSize;
+	//params.tileHeight = m_tileSize;
 	rcVcopy(params.orig, m_orig);
 
 	int tileBits = rcMin((int)ilog2(nextPow2(m_maxTile)), 14);
@@ -398,7 +426,9 @@ bool UnityNavMeshLoader::loadBinary(std::string filepath) {
 	for (int i = 0; i < m_maxTile; i++) {
 		parseTile(m_navMesh, content+index[i]);
 	}
-
+	setTileSize(m_navMesh);
+	printf("tileSize = %f, tsc/tiles = %d/%d\n", ts, tsc, m_maxTile);
+	
 	delete[] content;
 	content = NULL;
 

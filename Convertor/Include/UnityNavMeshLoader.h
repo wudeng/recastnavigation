@@ -34,10 +34,6 @@ public:
 		return m_tileSize;
 	}
 
-	void setTileSize(float sz) {
-		m_tileSize = sz;
-	}
-
 	float getWalkableHeight() {
 		return m_walkableHeight;
 	}

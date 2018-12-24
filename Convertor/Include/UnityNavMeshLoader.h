@@ -1,28 +1,30 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <cstdint>
 
 #include "DetourNavMesh.h"
 
 #define DEFAULT_TILE_SIZE 42.666668f
 #define DEFAULT_CELL_SIZE 0.16666667f
 
-class YamlAssetLoader
+static const float m_orig[3] = { 0.0f , 0.0f , 0.0f };
+
+class UnityNavMeshLoader
 {
 public:
-	YamlAssetLoader() : m_navMesh(dtAllocNavMesh()) {
+	UnityNavMeshLoader() : m_navMesh(dtAllocNavMesh()) {
 	}
 
-	~YamlAssetLoader() {
+	~UnityNavMeshLoader() {
 		if (m_navMesh) {
 			dtFreeNavMesh(m_navMesh);
 			m_navMesh = NULL;
 		}
 	}
 	
-	bool load(std::string filepath);
-
-	std::vector<std::string> getMeshData();
+	bool loadText(std::string filepath);
+	bool loadBinary(std::string filepath);
 
 	float getCellSize() {
 		return m_cellSize;
@@ -65,7 +67,6 @@ private:
 	float m_cellSize;
 	int m_maxTile;
 
-	float m_orig[3] = { 0.0f , 0.0f , 0.0f };
 	dtNavMesh* m_navMesh;
 	//std::string m_meshData[];
 };

@@ -1,14 +1,14 @@
 #include <string>
 #include <cstdio>
+#include <cstring>
 #include <cassert>
 #include "Recast.h"
 #include "DetourAlloc.h"
 #include "DetourCommon.h"
 #include "DetourNavMesh.h"
 #include "DetourNavMeshBuilder.h"
-#include "YamlAssetLoader.h"
+#include "UnityNavMeshLoader.h"
 #include "DetourNavMeshQuery.h"
-#include "YamlAssetLoader.h"
 
 
 int hexval(char ch) {
@@ -129,18 +129,6 @@ bool readFile(std::string filepath, char *&buf, int &bufSize) {
 	return true;
 }
 
-
-
-
-void printMagic(int magic) {
-	char *p = (char *)&magic;
-	printf("magic = ");
-	for (int i = 0; i < 4; i++) {
-		printf("%c ", *p++);
-	}
-	printf("\n");
-}
-
 bool addTile(AssetMeshHeader *h, dtParam *param, dtNavMesh *mesh) {
 	// Calculate data size
 	int maxLinkCount = 6 * h->polyCount * 3;
@@ -175,7 +163,7 @@ bool addTile(AssetMeshHeader *h, dtParam *param, dtNavMesh *mesh) {
 	float* navDVerts = dtGetThenAdvanceBufferPointer<float>(d, detailVertsSize);
 	unsigned char* navDTris = dtGetThenAdvanceBufferPointer<unsigned char>(d, detailTrisSize);
 	dtBVNode* navBvtree = dtGetThenAdvanceBufferPointer<dtBVNode>(d, bvTreeSize);
-	dtOffMeshConnection* offMeshCons = dtGetThenAdvanceBufferPointer<dtOffMeshConnection>(d, offMeshConsSize);
+	//dtOffMeshConnection* offMeshCons = dtGetThenAdvanceBufferPointer<dtOffMeshConnection>(d, offMeshConsSize);
 
 
 	// Store header
@@ -224,7 +212,7 @@ bool addTile(AssetMeshHeader *h, dtParam *param, dtNavMesh *mesh) {
 
 		dtl.vertBase = from->vertBase;
 		if (from->vertCount > 255 || from->triCount > 255) {
-			printf("errrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrror! invalid data\n");
+			fprintf(stderr, "errrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrror! invalid data\n");
 			exit(-1);
 		}
 		dtl.vertCount = (unsigned char)from->vertCount; // warning
@@ -243,10 +231,9 @@ bool addTile(AssetMeshHeader *h, dtParam *param, dtNavMesh *mesh) {
 	return true;
 }
 
-void parseTile(dtNavMesh *mesh, char *buf, int len) {
+void parseTile(dtNavMesh *mesh, char *buf, int len = 0) {
 	AssetMeshHeader *header = (AssetMeshHeader *)buf;
-	printMagic(header->magic);
-	printf("version = %d\n", header->version);
+	/* printf("version = %d\n", header->version);
 	printf("x = %d, y = %d\n", header->x, header->y);
 	printf("userId = %d\n", header->userId);
 	printf("polyCount = %d\n", header->polyCount);
@@ -260,7 +247,7 @@ void parseTile(dtNavMesh *mesh, char *buf, int len) {
 	float w = header->bmax[0] - header->bmin[0];
 	float h = header->bmax[0] - header->bmin[0];
 	printf("tilewidth, tileHeight = %f, %f, %f, %d\n", w, h, header->bmin[0] / DEFAULT_TILE_SIZE, header->x);
-	printf("bvQuantFactor = %f\n", header->bvQuantFactor);
+	printf("bvQuantFactor = %f\n", header->bvQuantFactor);*/
 	//rcVmin(orig, header->bmin);
 
 	// Calculate data size
@@ -281,8 +268,8 @@ void parseTile(dtNavMesh *mesh, char *buf, int len) {
 	dtPolyDetailIndex* navDTris = dtGetThenAdvanceBufferPointer<dtPolyDetailIndex>(d, detailTrisSize);
 	dtBVNode* navBvtree = dtGetThenAdvanceBufferPointer<dtBVNode>(d, bvTreeSize);
 
-	if (d - (unsigned char *)buf != len) {
-		printf("errrrrrrrrrrrrrrrrrrror, invalid data, input len = %d, calc len = %d \n", len, d - (unsigned char *)buf);
+	if (len != 0 && d - (unsigned char *)buf != len) {
+		fprintf(stderr, "errrrrrrrrrrrrrrrrrrror, invalid data, input len = %d, calc len = %d \n", len, (int)(d - (unsigned char *)buf));
 		exit(-1);
 	}
 
@@ -298,8 +285,7 @@ void parseTile(dtNavMesh *mesh, char *buf, int len) {
 }
 
 
-
-bool YamlAssetLoader::load(std::string filepath) {
+bool UnityNavMeshLoader::loadText(std::string filepath) {
 
 	char *content;
 	int bufSize;
@@ -340,7 +326,7 @@ bool YamlAssetLoader::load(std::string filepath) {
 	delete[] content;
 	content = NULL;
 
-	
+
 	m_maxTile = m_MeshData.size();
 	m_cellSize = (m_cellSize == 0) ? DEFAULT_CELL_SIZE : m_cellSize;
 	m_tileSize = (m_tileSize == 0) ? DEFAULT_TILE_SIZE : m_tileSize;
@@ -358,17 +344,63 @@ bool YamlAssetLoader::load(std::string filepath) {
 	int polyBits = 22 - tileBits;
 	params.maxTiles = 1 << tileBits;
 	params.maxPolys = 1 << polyBits;
-	
+
 	m_navMesh->init(&params);
 
 	for (int i = 0; i < m_maxTile; i++) {
 		int len = str2hex(m_MeshData[i], row);
-		printf("str size = %d, binary size = %d\n", m_MeshData[i].size(), len);
-		parseTile(m_navMesh, row, len);	
+		printf("str size = %u, binary size = %d\n", (int)m_MeshData[i].size(), len);
+		parseTile(m_navMesh, row, len);
 	}
 
 	delete[] row;
 	row = NULL;
+
+	return true;
+}
+
+bool UnityNavMeshLoader::loadBinary(std::string filepath) {
+
+	char *content;
+	int bufSize;
+	if (!readFile(filepath, content, bufSize)) {
+		return false;
+	}
+
+	std::vector<int> index;
+	int *ptr;
+
+	for (int i = 1; i < bufSize - 4; i++) {
+		ptr = (int *)(content + i);
+		if (*ptr == DT_NAVMESH_MAGIC && *(ptr + 1) == 16) {
+			index.push_back(i);
+			i += sizeof(AssetMeshHeader);
+		}
+	}
+
+	m_maxTile = index.size();
+	m_cellSize = DEFAULT_CELL_SIZE;
+	m_tileSize = DEFAULT_TILE_SIZE;
+
+	dtNavMeshParams params;
+	params.tileWidth = m_tileSize;
+	params.tileHeight = m_tileSize;
+	rcVcopy(params.orig, m_orig);
+
+	int tileBits = rcMin((int)ilog2(nextPow2(m_maxTile)), 14);
+	if (tileBits > 14) tileBits = 14;
+	int polyBits = 22 - tileBits;
+	params.maxTiles = 1 << tileBits;
+	params.maxPolys = 1 << polyBits;
+
+	m_navMesh->init(&params);
+
+	for (int i = 0; i < m_maxTile; i++) {
+		parseTile(m_navMesh, content+index[i]);
+	}
+
+	delete[] content;
+	content = NULL;
 
 	return true;
 }

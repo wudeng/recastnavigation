@@ -18,7 +18,7 @@ solution "recastnavigation"
 	symbols "On"
 	exceptionhandling "Off"
 	rtti "Off"
-	flags { "FatalCompileWarnings" }
+	flags { "FatalCompileWarnings", "C++11"}
 
 	-- debug configs
 	configuration "Debug*"
@@ -206,7 +206,7 @@ project "Convertor"
 		"DetourCrowd",
 		"DetourTileCache",
 		"Recast",
-		"RecastDemo"
+		-- "RecastDemo"
 	}
 
 	-- distribute executable in RecastDemo/Bin directory

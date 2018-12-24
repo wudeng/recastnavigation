@@ -3,7 +3,7 @@
 #include <cstring>
 #include <cstdint>
 #include <cassert>
-#include "YamlAssetLoader.h"
+#include "UnityNavMeshLoader.h"
 #include "recast_wrap.h"
 
 struct NavMeshSetHeader
@@ -133,13 +133,6 @@ dtNavMesh* loadAll(const char* path)
 	return mesh;
 }
 
-// Returns a random number [0..1]
-static float frand()
-{
-	//	return ((float)(rand() & 0xffff)/(float)0xffff);
-	return (float)rand() / (float)RAND_MAX;
-}
-
 void readfile(const char * filename, unsigned char *&buf, int &sz) {
 	FILE *fp = fopen(filename, "rb");
 	fseek(fp, 0, SEEK_END);
@@ -149,7 +142,7 @@ void readfile(const char * filename, unsigned char *&buf, int &sz) {
 	assert(fread(buf, sz, 1, fp)==1);
 }
 
-void test(char *filepath) {
+bool verify(const char *filepath) {
 
 	/*dtNavMesh * navMesh;
 	navMesh = loadAll("yaml_navmesh.bin");
@@ -189,17 +182,14 @@ void test(char *filepath) {
 		NavPoint* path;
 		status = NavMeshQuery_findStraightPath(query, spos, epos, &path, &pathCount);
 		if (!NavStatus_succeed(status)) {
-			printf("error\n");
-		}
-		else {
-			printf("succeed: %d\n", pathCount);
+			fprintf(stderr, "convert error!!\n");
+			return false;
 		}
 	}
-
-
+	return true;
 }
 
-int main() {
+int main(int argc, const char **argv) {
 	/*
 	dtNavMesh * navMesh = loadAll("yaml_navmesh.bin");
 	dtNavMeshQuery *navQuery = dtAllocNavMeshQuery();
@@ -223,13 +213,24 @@ int main() {
 	}
 	getchar();
 	return 0;*/
-	
-	YamlAssetLoader loader;
-	loader.load("tokyo.asset");
-	saveAll("tokyo.bin", loader.getNavMesh());
-	getchar();
-	test("tokyo.bin");
-	getchar();
 
-	return 0;
+	if (argc < 2) {
+		fprintf(stderr, "Usage: ./Convertor clientMesh serverMesh\n");
+		return -1;
+	}
+
+	const char *clientMesh = argv[1];
+	const char *serverMesh = argv[2];
+	
+	UnityNavMeshLoader loader;
+	loader.loadBinary(clientMesh);
+	saveAll(serverMesh, loader.getNavMesh());
+	if (!verify(serverMesh)) {
+		fprintf(stderr, "\033[40;31mconvert NavMesh %s error\033[0m\n", clientMesh);
+		return -1;
+	}
+	else {
+		fprintf(stderr, "\033[40;32mconvert NavMesh %s to %s succeed\033[0m\n", clientMesh, serverMesh);
+		return 0;
+	}
 }

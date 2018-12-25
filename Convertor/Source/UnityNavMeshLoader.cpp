@@ -309,18 +309,30 @@ void setTileSize(dtNavMesh *nav) {
 	pa->tileHeight = ts;
 }
 
-
-bool UnityNavMeshLoader::loadText(std::string filepath) {
-
+bool UnityNavMeshLoader::load(std::string filepath) {
 	char *content;
 	int bufSize;
 	if (!readFile(filepath, content, bufSize)) {
 		return false;
 	}
+	if (content[0] == '%') {
+		return loadText(content, bufSize);
+	}
+	else {
+		return loadBinary(content, bufSize);
+	}
+}
+
+
+bool UnityNavMeshLoader::loadText(char *content, int bufSize) {
 
 	char *src = content;
 	char *srcEnd = content + bufSize;
 	char *row = new char[bufSize];
+
+	// offmesh
+	OffMesh o;
+	std::vector<OffMesh> offmesh;
 
 	while (src < srcEnd) {
 		row[0] = '\0';
@@ -343,6 +355,27 @@ bool UnityNavMeshLoader::loadText(std::string filepath) {
 		else if (strncmp(row, "cellSize: ", 10) == 0) {
 			sscanf(row + 10, "%f", &m_cellSize);
 		}
+
+		// offmesh
+		else if (strncmp(row, "- m_Start: ", 11) == 0) {
+			sscanf(row + 11, "{x: %f, y: %f, z: %f}", &o.start[0], &o.start[1], &o.start[2]);
+		}
+		else if (strncmp(row, "m_End: ", 7) == 0) {
+			sscanf(row + 7, "{x: %f, y: %f, z: %f}", &o.end[0], &o.end[1], &o.end[2]);
+		}
+		else if (strncmp(row, "m_Radius: ", 10) == 0) {
+			sscanf(row + 10, "%f", &o.rad);
+		}
+		else if (strncmp(row, "m_LinkType: ", 12) == 0) {
+			sscanf(row + 12, "%u", &o.type);
+		}
+		else if (strncmp(row, "m_Area: ", 8) == 0) {
+			sscanf(row + 8, "%u", &o.area);
+		}
+		else if (strncmp(row, "m_LinkDirection: ", 17) == 0) {
+			sscanf(row + 17, "%u", &o.dir);
+			offmesh.push_back(o);
+		}
 		else {
 			//
 		}
@@ -351,7 +384,7 @@ bool UnityNavMeshLoader::loadText(std::string filepath) {
 	delete[] content;
 	content = NULL;
 
-
+	int offmeshCount = offmesh.size();
 	m_maxTile = m_MeshData.size();
 	m_cellSize = (m_cellSize == 0) ? DEFAULT_CELL_SIZE : m_cellSize;
 	m_tileSize = (m_tileSize == 0) ? DEFAULT_TILE_SIZE : m_tileSize;
@@ -387,14 +420,7 @@ bool UnityNavMeshLoader::loadText(std::string filepath) {
 	return true;
 }
 
-bool UnityNavMeshLoader::loadBinary(std::string filepath) {
-
-	char *content;
-	int bufSize;
-	if (!readFile(filepath, content, bufSize)) {
-		return false;
-	}
-
+bool UnityNavMeshLoader::loadBinary(char *content, int bufSize) {
 	std::vector<int> index;
 	int *ptr;
 

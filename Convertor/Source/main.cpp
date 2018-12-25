@@ -223,7 +223,7 @@ int main(int argc, const char **argv) {
 	const char *serverMesh = argv[2];
 	
 	UnityNavMeshLoader loader;
-	loader.loadBinary(clientMesh);
+	loader.load(clientMesh);
 	saveAll(serverMesh, loader.getNavMesh());
 	if (!verify(serverMesh)) {
 		fprintf(stderr, "\033[40;31mconvert NavMesh %s error\033[0m\n", clientMesh);

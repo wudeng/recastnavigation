@@ -240,6 +240,7 @@ static int createBVTree(dtNavMeshCreateParams* params, dtBVNode* nodes, int /*nn
 	return curNode;
 }
 
+// 判断pt位于bmin和bmax表示的aabb在xz平面的方位。一共9种可能性。0-7表示在外面，表示8个方位，从x+开始，逆时针。0xff表示在aabb里面。
 static unsigned char classifyOffMeshPoint(const float* pt, const float* bmin, const float* bmax)
 {
 	static const unsigned char XP = 1<<0;
@@ -302,6 +303,7 @@ bool dtCreateNavMeshData(dtNavMeshCreateParams* params, unsigned char** outData,
 		if (!offMeshConClass)
 			return false;
 
+		// 计算3D的AABB盒边界。因为tile中只有xz平面的，所以还需要计算y方向的
 		// Find tight heigh bounds, used for culling out off-mesh start locations.
 		float hmin = FLT_MAX;
 		float hmax = -FLT_MAX;
@@ -337,9 +339,11 @@ bool dtCreateNavMeshData(dtNavMeshCreateParams* params, unsigned char** outData,
 		{
 			const float* p0 = &params->offMeshConVerts[(i*2+0)*3];
 			const float* p1 = &params->offMeshConVerts[(i*2+1)*3];
+			// 判断xz方向
 			offMeshConClass[i*2+0] = classifyOffMeshPoint(p0, bmin, bmax);
 			offMeshConClass[i*2+1] = classifyOffMeshPoint(p1, bmin, bmax);
 
+			// 判断y方向
 			// Zero out off-mesh start positions which are not even potentially touching the mesh.
 			if (offMeshConClass[i*2+0] == 0xff)
 			{

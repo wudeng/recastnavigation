@@ -23,8 +23,7 @@ public:
 		}
 	}
 	
-	bool loadText(std::string filepath);
-	bool loadBinary(std::string filepath);
+	bool load(std::string filepath);
 
 	float getCellSize() {
 		return m_cellSize;
@@ -55,6 +54,9 @@ public:
 	}
 
 private:
+	bool loadText(char *content, int bufSize);
+	bool loadBinary(char *content, int bufSize);
+
 	std::vector<std::string> m_MeshData;
 	float m_tileSize;
 	float m_walkableHeight;
@@ -114,6 +116,15 @@ struct dtParam {
 	float *detailVerts;
 	dtPolyDetailIndex* detailTris;
 	dtBVNode* bvTree;
+};
+
+struct OffMesh {
+	float start[3];
+	float end[3];
+	float rad;
+	unsigned int type;
+	unsigned int area;
+	unsigned int dir;
 };
 
 

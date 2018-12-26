@@ -109,14 +109,6 @@ struct AssetLink {
 	unsigned char bmin, bmax;
 };
 
-struct dtParam {
-	float *verts;
-	AssetPoly *polys;
-	AssetPolyDetail *detailMeshes;
-	float *detailVerts;
-	dtPolyDetailIndex* detailTris;
-	dtBVNode* bvTree;
-};
 
 struct OffMesh {
 	float start[3];
@@ -125,6 +117,16 @@ struct OffMesh {
 	unsigned int type;
 	unsigned int area;
 	unsigned int dir;
+};
+
+struct dtParam {
+	float *verts;
+	AssetPoly *polys;
+	AssetPolyDetail *detailMeshes;
+	float *detailVerts;
+	dtPolyDetailIndex* detailTris;
+	dtBVNode* bvTree;
+	std::vector<OffMesh> *offmesh;
 };
 
 

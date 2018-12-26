@@ -10,6 +10,7 @@
 #include "DetourNavMeshBuilder.h"
 #include "UnityNavMeshLoader.h"
 #include "DetourNavMeshQuery.h"
+#include "Sample.h"
 
 static float ts = DEFAULT_TILE_SIZE;
 static const float walkableClimb = 0.4166667f;
@@ -164,14 +165,17 @@ static unsigned char classifyOffMeshPoint(const float* pt, const float* bmin, co
 }
 
 bool addTile(AssetMeshHeader *header, dtParam *param, dtNavMesh *mesh) {
-	std::vector<OffMesh> offmesh;
+	std::vector<OffMesh> *offmesh = param->offmesh;
 	// Classify off-mesh connection points. We store only the connections
 	// whose start point is inside the tile.
 	unsigned char* offMeshConClass = 0;
 	int storedOffMeshConCount = 0;
 	int offMeshConLinkCount = 0;
 
-	unsigned int offMeshConCount = offmesh.size();
+	unsigned int offMeshConCount = 0;
+	if (offmesh) {
+		offMeshConCount = offmesh->size();
+	}
 
 	if (offMeshConCount > 0U)
 	{
@@ -212,8 +216,8 @@ bool addTile(AssetMeshHeader *header, dtParam *param, dtNavMesh *mesh) {
 
 		for (unsigned int i = 0; i < offMeshConCount; ++i)
 		{
-			const float* p0 = offmesh[i].start;
-			const float* p1 = offmesh[i].end;
+			const float* p0 = offmesh->at(i).start;
+			const float* p1 = offmesh->at(i).end;
 			// ÅÐ¶Ïxz·½Ïò
 			offMeshConClass[i * 2 + 0] = classifyOffMeshPoint(p0, bmin, bmax);
 			offMeshConClass[i * 2 + 1] = classifyOffMeshPoint(p1, bmin, bmax);
@@ -300,8 +304,8 @@ bool addTile(AssetMeshHeader *header, dtParam *param, dtNavMesh *mesh) {
 	hd->y = header->y;
 	hd->layer = 0;
 	hd->userId = header->userId;
-	hd->polyCount = header->polyCount;
-	hd->vertCount = header->vertCount;
+	hd->polyCount = totPolyCount;
+	hd->vertCount = totVertCount;
 	hd->maxLinkCount = maxLinkCount;
 	dtVcopy(hd->bmin, header->bmin);
 	dtVcopy(hd->bmax, header->bmax);
@@ -313,13 +317,27 @@ bool addTile(AssetMeshHeader *header, dtParam *param, dtNavMesh *mesh) {
 	hd->walkableHeight = 2;
 	hd->walkableRadius = 0.5;
 	hd->walkableClimb = walkableClimb;
-	hd->offMeshConCount = offMeshConCount;
+	hd->offMeshConCount = storedOffMeshConCount;
 	hd->bvNodeCount = header->polyCount * 2;
 
-	//const int offMeshVertsBase = header->vertCount;
+	const int offMeshVertsBase = header->vertCount;
 	const int offMeshPolyBase = header->polyCount;
 
 	memcpy(navVerts, param->verts, dtAlign4(sizeof(float)) * 3 * hd->vertCount);
+	// Off-mesh link vertices.
+	int n = 0;
+	for (unsigned int i = 0; i < offMeshConCount; ++i)
+	{
+		// Only store connections which start from this tile.
+		if (offMeshConClass[i * 2 + 0] == 0xff)
+		{
+			OffMesh o = offmesh->at(i);
+			float* v = &navVerts[(offMeshVertsBase + n * 2) * 3];
+			dtVcopy(&v[0], o.start);
+			dtVcopy(&v[3], o.end);
+			n++;
+		}
+	}
 
 	// Store polygons
 	// Mesh polys
@@ -333,6 +351,24 @@ bool addTile(AssetMeshHeader *header, dtParam *param, dtNavMesh *mesh) {
 		p->setType(DT_POLYTYPE_GROUND);
 		memcpy(p->verts, from->verts, sizeof(unsigned short) * DT_VERTS_PER_POLYGON);
 		memcpy(p->neis, from->neis, sizeof(unsigned short) * DT_VERTS_PER_POLYGON);
+	}
+	// Off-mesh connection vertices.
+	n = 0;
+	for (unsigned int i = 0; i < offMeshConCount; ++i)
+	{
+		// Only store connections which start from this tile.
+		if (offMeshConClass[i * 2 + 0] == 0xff)
+		{
+			dtPoly* p = &navPolys[offMeshPolyBase + n];
+			OffMesh o = offmesh->at(i);
+			p->vertCount = 2;
+			p->verts[0] = (unsigned short)(offMeshVertsBase + n * 2 + 0);
+			p->verts[1] = (unsigned short)(offMeshVertsBase + n * 2 + 1);
+			p->flags = SAMPLE_POLYFLAGS_JUMP; //TODO
+			p->setArea(o.area);
+			p->setType(DT_POLYTYPE_OFFMESH_CONNECTION);
+			n++;
+		}
 	}
 
 	for (int i = 0; i < header->detailMeshCount; ++i)
@@ -357,7 +393,7 @@ bool addTile(AssetMeshHeader *header, dtParam *param, dtNavMesh *mesh) {
 	memcpy(navBvtree, param->bvTree, dtAlign4(sizeof(dtBVNode) * hd->polyCount * 2));
 
 	// Store Off-Mesh connections.
-	int n = 0;
+	n = 0;
 	for (unsigned int i = 0; i < offMeshConCount; ++i)
 	{
 		// Only store connections which start from this tile.
@@ -366,7 +402,7 @@ bool addTile(AssetMeshHeader *header, dtParam *param, dtNavMesh *mesh) {
 			dtOffMeshConnection* con = &offMeshCons[n];
 			con->poly = (unsigned short)(offMeshPolyBase + n);
 			// Copy connection end-points.
-			OffMesh o = offmesh[i];
+			OffMesh o = offmesh->at(i);
 			dtVcopy(&con->pos[0], o.start);
 			dtVcopy(&con->pos[3], o.end);
 			con->rad = o.rad;
@@ -395,7 +431,7 @@ void update_ts(float sz) {
 	}
 }
 
-void parseTile(dtNavMesh *mesh, char *buf, int len = 0) {
+void parseTile(dtNavMesh *mesh, char *buf, int len, std::vector<OffMesh> *offmesh = NULL) {
 	AssetMeshHeader *header = (AssetMeshHeader *)buf;
 
 	/*
@@ -449,6 +485,7 @@ void parseTile(dtNavMesh *mesh, char *buf, int len = 0) {
 	param.detailVerts = navDVerts;
 	param.detailTris = navDTris;
 	param.bvTree = navBvtree;
+	param.offmesh = offmesh;
 
 	addTile(header, &param, mesh);	
 }
@@ -557,8 +594,7 @@ bool UnityNavMeshLoader::loadText(char *content, int bufSize) {
 
 	for (int i = 0; i < m_maxTile; i++) {
 		int len = str2hex(m_MeshData[i], row);
-		printf("str size = %u, binary size = %d\n", (int)m_MeshData[i].size(), len);
-		parseTile(m_navMesh, row, len);
+		parseTile(m_navMesh, row, len, &offmesh);
 	}
 	setTileSize(m_navMesh);
 	printf("tileSize = %f, tsc/tiles = %d/%d\n", ts, tsc, m_maxTile);

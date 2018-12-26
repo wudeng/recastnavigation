@@ -454,6 +454,7 @@ void dtNavMesh::connectExtLinks(dtMeshTile* tile, dtMeshTile* target, int side)
 	}
 }
 
+// 起点在target tile，终点在在tile的情况
 void dtNavMesh::connectExtOffMeshLinks(dtMeshTile* tile, dtMeshTile* target, int side)
 {
 	if (!tile) return;

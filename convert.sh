@@ -16,3 +16,6 @@ for ClientMesh in $ClientMeshes; do
     $Convertor $ClientMesh $ServerMesh
 done
 
+clientfile=./RecastDemo/Build/vs2015/tokyo_off.asset
+serverfile=./RecastDemo/Build/vs2015/tokyo_off.bin
+$Convertor $clientfile $serverfile

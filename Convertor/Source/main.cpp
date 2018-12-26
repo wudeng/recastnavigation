@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cassert>
 #include "UnityNavMeshLoader.h"
+#include "DetourCommon.h"
 #include "recast_wrap.h"
 
 struct NavMeshSetHeader
@@ -187,7 +188,9 @@ bool verify(const char *filepath) {
 			fprintf(stderr, "convert error!!\n");
 			return false;
 		}
-		foundPath += (pathCount > 0) ? 1 : 0;
+		if (dtVdist(path[pathCount - 1], epos) <= 0.01) {
+			foundPath += 1;
+		}
 	}
 	printf("FoundPath: %d/%d\n", foundPath, total);
 	return true;

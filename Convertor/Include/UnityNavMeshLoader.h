@@ -5,8 +5,8 @@
 
 #include "DetourNavMesh.h"
 
-#define DEFAULT_TILE_SIZE 42.666668f
-#define DEFAULT_CELL_SIZE 0.16666667f
+#define DEFAULT_CELL_SIZE (1.0f / 6.0f)
+#define DEFAULT_TILE_SIZE (DEFAULT_CELL_SIZE*256)
 
 static const float m_orig[3] = { 0.0f , 0.0f , 0.0f };
 

@@ -165,8 +165,10 @@ bool verify(const char *filepath) {
 	NavMeshQuery query;
 	NavMeshQuery_create(&query, mesh, 2048);
 	NavStatus status;
+	int foundPath = 0;
+	int total = 1000;
 
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < total; i++) {
 		//navQuery->findRandomPoint(&filter, frand, &startRef, spos);
 		//navQuery->findRandomPoint(&filter, frand, &endRef, epos);
 		/*dtStatus status = navQuery->findPath(startRef, endRef, spos, epos, &filter, m_polys, &npolys, 255);
@@ -185,35 +187,13 @@ bool verify(const char *filepath) {
 			fprintf(stderr, "convert error!!\n");
 			return false;
 		}
+		foundPath += (pathCount > 0) ? 1 : 0;
 	}
+	printf("FoundPath: %d/%d\n", foundPath, total);
 	return true;
 }
 
 int main(int argc, const char **argv) {
-	/*
-	dtNavMesh * navMesh = loadAll("yaml_navmesh.bin");
-	dtNavMeshQuery *navQuery = dtAllocNavMeshQuery();
-	navQuery->init(navMesh, 65535);
-	dtQueryFilter filter;
-	filter.setIncludeFlags(0xffff ^ 0x10);
-	filter.setExcludeFlags(0);
-	dtPolyRef startRef;
-	dtPolyRef endRef;
-	float spos[3];
-	float epos[3];
-	dtPolyRef m_polys[256];
-	int npolys;
-	for (int i = 0; i < 100; i++) {
-		navQuery->findRandomPoint(&filter, frand, &startRef, spos);
-		navQuery->findRandomPoint(&filter, frand, &endRef, epos);
-		dtStatus status = navQuery->findPath(startRef, endRef, spos, epos, &filter, m_polys, &npolys, 255);
-		if (dtStatusSucceed(status)) {
-			printf("npolys = %d\n", npolys);
-		}
-	}
-	getchar();
-	return 0;*/
-
 	if (argc < 2) {
 		fprintf(stderr, "Usage: ./Convertor clientMesh serverMesh\n");
 		return -1;

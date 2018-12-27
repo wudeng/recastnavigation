@@ -54,8 +54,8 @@ public:
 	}
 
 private:
-	bool loadText(char *content, int bufSize);
-	bool loadBinary(char *content, int bufSize);
+	bool loadText(const char *content, int bufSize);
+	bool loadBinary(const char *content, int bufSize);
 
 	std::vector<std::string> m_MeshData;
 	float m_tileSize;

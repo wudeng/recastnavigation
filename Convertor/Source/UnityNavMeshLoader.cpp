@@ -431,7 +431,7 @@ void update_ts(float sz) {
 	}
 }
 
-void parseTile(dtNavMesh *mesh, char *buf, int len, std::vector<OffMesh> *offmesh = NULL) {
+void parseTile(dtNavMesh *mesh, const char *buf, int len, std::vector<OffMesh> *offmesh = NULL) {
 	AssetMeshHeader *header = (AssetMeshHeader *)buf;
 
 	/*
@@ -503,18 +503,20 @@ bool UnityNavMeshLoader::load(std::string filepath) {
 		return false;
 	}
 	if (content[0] == '%') {
+		printf("begin processing text asset....\n");
 		return loadText(content, bufSize);
 	}
 	else {
+		printf("begin processing binary asset....\n");
 		return loadBinary(content, bufSize);
 	}
 }
 
 
-bool UnityNavMeshLoader::loadText(char *content, int bufSize) {
+bool UnityNavMeshLoader::loadText(const char *content, int bufSize) {
 
-	char *src = content;
-	char *srcEnd = content + bufSize;
+	char *src = (char *)content;
+	char *srcEnd = (char *)content + bufSize;
 	char *row = new char[bufSize];
 
 	// offmesh
@@ -561,6 +563,7 @@ bool UnityNavMeshLoader::loadText(char *content, int bufSize) {
 		}
 		else if (strncmp(row, "m_LinkDirection: ", 17) == 0) {
 			sscanf(row + 17, "%u", &o.dir);
+			o.dir = 1U;
 			offmesh.push_back(o);
 		}
 		else {
@@ -606,7 +609,7 @@ bool UnityNavMeshLoader::loadText(char *content, int bufSize) {
 	return true;
 }
 
-bool UnityNavMeshLoader::loadBinary(char *content, int bufSize) {
+bool UnityNavMeshLoader::loadBinary(const char *content, int bufSize) {
 	std::vector<int> index;
 	std::vector<int> length;
 	int *ptr;
@@ -621,12 +624,40 @@ bool UnityNavMeshLoader::loadBinary(char *content, int bufSize) {
 	}
 
 	m_maxTile = index.size();
-	m_cellSize = DEFAULT_CELL_SIZE;
-	//m_tileSize = DEFAULT_TILE_SIZE;
+
+	int offset = index[m_maxTile - 1] + length[m_maxTile-1] + 16 + 32; // 16 hash, 32 settings
+	
+	offset += 4;
+	m_cellSize = *(float *)(content + offset); offset += 4; //CellSize
+	offset += 4;	// ManualTileSize
+	int tileSize = *(int *)(content + offset); offset += 4; //TileSize
+	offset += 4; // AccuratePlacement
+	offset += 4; // Debug >= 2017.2
+	int hightMapSize = *(int *)(content + offset); offset += 4;
+	dtIgnoreUnused(hightMapSize);
+	int heightMeshes = *(int *)(content + offset); offset += 4;
+	dtIgnoreUnused(heightMeshes);
+	int offMeshLinks = *(int *)(content + offset); offset += 4;
+	std::vector<OffMesh> offmesh;
+	OffMesh o;
+	for (int i = 0; i < offMeshLinks; i++) {
+		dtVcopy(o.start, (float *)(content + offset)); offset += sizeof(float) * 3;
+		dtVcopy(o.end, (float *)(content + offset)); offset += sizeof (float) * 3;
+		o.rad = *(float *)(content + offset); offset += sizeof(float);
+		o.type = *(unsigned short *)(content + offset); offset += 2;
+		o.area = *(unsigned char *)(content + offset); offset += 1;
+		o.dir = *(unsigned char *)(content + offset); offset += 1;
+		o.dir = 1U;
+		offmesh.push_back(o);
+	}
+
+	m_tileSize = tileSize * m_cellSize;
+
+	printf("cellsize = %f, tilesize = %d, ts = %f\n", m_cellSize, tileSize, m_tileSize);
 
 	dtNavMeshParams params;
-	//params.tileWidth = m_tileSize;
-	//params.tileHeight = m_tileSize;
+	params.tileWidth = m_tileSize;
+	params.tileHeight = m_tileSize;
 	rcVcopy(params.orig, m_orig);
 
 	int tileBits = rcMin((int)ilog2(nextPow2(m_maxTile)), 14);
@@ -638,9 +669,9 @@ bool UnityNavMeshLoader::loadBinary(char *content, int bufSize) {
 	m_navMesh->init(&params);
 
 	for (int i = 0; i < m_maxTile; i++) {
-		parseTile(m_navMesh, content+index[i], length[i]);
+		parseTile(m_navMesh, content+index[i], length[i], &offmesh);
 	}
-	setTileSize(m_navMesh);
+	//setTileSize(m_navMesh);
 	printf("tileSize = %f, tsc/tiles = %d/%d\n", ts, tsc, m_maxTile);
 	
 	delete[] content;

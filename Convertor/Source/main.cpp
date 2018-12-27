@@ -167,7 +167,7 @@ bool verify(const char *filepath) {
 	NavMeshQuery_create(&query, mesh, 2048);
 	NavStatus status;
 	int foundPath = 0;
-	int total = 1000;
+	int total = 10000;
 
 	for (int i = 0; i < total; i++) {
 		//navQuery->findRandomPoint(&filter, frand, &startRef, spos);
@@ -188,7 +188,7 @@ bool verify(const char *filepath) {
 			fprintf(stderr, "convert error!!\n");
 			return false;
 		}
-		if (dtVdist(path[pathCount - 1], epos) <= 0.01) {
+		if (pathCount >= 2048 || dtVdist(path[pathCount - 1], epos) <= 0.01) {
 			foundPath += 1;
 		}
 	}

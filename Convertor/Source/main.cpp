@@ -143,6 +143,21 @@ void readfile(const char * filename, unsigned char *&buf, int &sz) {
 	assert(fread(buf, sz, 1, fp)==1);
 }
 
+void calcPolyNormal(dtNavMesh *mesh, dtPolyRef ref, float *cross) {
+	const dtMeshTile* tile = 0;
+	const dtPoly* poly = 0;
+	mesh->getTileAndPolyByRefUnsafe(ref, &tile, &poly);
+	const float *v0 = &tile->verts[poly->verts[0] * 3];
+	const float *v1 = &tile->verts[poly->verts[1] * 3];
+	const float *v2 = &tile->verts[poly->verts[2] * 3];
+	float e0[3];
+	float e1[3];
+	dtVsub(e0, v1, v0);
+	dtVsub(e1, v2, v0);
+	dtVcross(cross, e0, e1);
+	return;
+}
+
 bool verify(const char *filepath) {
 
 	/*dtNavMesh * navMesh;
@@ -167,7 +182,7 @@ bool verify(const char *filepath) {
 	NavMeshQuery_create(&query, mesh, 2048);
 	NavStatus status;
 	int foundPath = 0;
-	int total = 10000;
+	int total = 100;
 
 	for (int i = 0; i < total; i++) {
 		//navQuery->findRandomPoint(&filter, frand, &startRef, spos);
@@ -177,10 +192,12 @@ bool verify(const char *filepath) {
 			printf("npolys = %d\n", npolys);
 		}*/
 
+		dtPolyRef spoly;
 		NavPoint spos;
+		dtPolyRef epoly;
 		NavPoint epos;
-		status = NavMeshQuery_findRandomPoint(query, spos);
-		status = NavMeshQuery_findRandomPoint(query, epos);
+		status = NavMeshQuery_findRandomPoint(query, spos, spoly);
+		status = NavMeshQuery_findRandomPoint(query, epos, epoly);
 		int pathCount = 0;
 		NavPoint* path;
 		status = NavMeshQuery_findStraightPath(query, spos, epos, &path, &pathCount);
@@ -188,8 +205,15 @@ bool verify(const char *filepath) {
 			fprintf(stderr, "convert error!!\n");
 			return false;
 		}
+		float scross[3];
+		float ecross[3];
+		calcPolyNormal((dtNavMesh*)mesh, spoly, scross);
+		calcPolyNormal((dtNavMesh*)mesh, epoly, ecross);
 		if (pathCount >= 2048 || dtVdist(path[pathCount - 1], epos) <= 0.01) {
 			foundPath += 1;
+		}
+		if (scross[1] < 0 || ecross[1] < 0 ) {
+			printf("i=%d, pathCount=%d, dist=%f, sy:%f, ey:%f\n", i, pathCount, dtVdist(path[pathCount - 1], epos), scross[1], ecross[1]);
 		}
 	}
 	printf("FoundPath: %d/%d\n", foundPath, total);

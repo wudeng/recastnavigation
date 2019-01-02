@@ -1074,6 +1074,8 @@ dtStatus dtNavMeshQuery::findPath(dtPolyRef startRef, dtPolyRef endRef,
 		const dtMeshTile* bestTile = 0;
 		const dtPoly* bestPoly = 0;
 		m_nav->getTileAndPolyByRefUnsafe(bestRef, &bestTile, &bestPoly);
+		if (bestPoly->vertCount == 2) {
+		}
 		
 		// Get parent poly and tile.
 		dtPolyRef parentRef = 0;

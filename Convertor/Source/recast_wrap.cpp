@@ -347,10 +347,8 @@ NavStatus NavMeshQuery_findFollowPath(NavMeshQuery q, const NavPoint startPos, c
 ** [in]    query       dtNavMeshQuery
 ** [out]   pos         The random location.
 */
-NavStatus NavMeshQuery_findRandomPoint(NavMeshQuery q, NavPoint pos)
+NavStatus NavMeshQuery_findRandomPoint(NavMeshQuery q, NavPoint pos, dtPolyRef &ref)
 {
-    dtPolyRef ref;
-
     /*
     filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);
     filter.setAreaCost(SAMPLE_POLYAREA_WATER, 10.0f);

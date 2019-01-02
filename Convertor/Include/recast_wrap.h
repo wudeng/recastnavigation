@@ -54,7 +54,7 @@ NavStatus NavMeshQuery_findFollowPath(NavMeshQuery q, const NavPoint startPos, c
 ** [in]    query       dtNavMeshQuery
 ** [out]   pos         The random location.
 */
-NavStatus NavMeshQuery_findRandomPoint(NavMeshQuery q, NavPoint pos);
+NavStatus NavMeshQuery_findRandomPoint(NavMeshQuery q, NavPoint pos, dtPolyRef &poly);
 
 /*
 ** 搜索center点extent半径内，落在多边形上的点

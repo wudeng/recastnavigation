@@ -220,6 +220,31 @@ bool verify(const char *filepath) {
 	return true;
 }
 
+bool testOffMesh(const char *filepath) {
+	unsigned char *buf;
+	int sz;
+	readfile(filepath, buf, sz);
+	NavMesh mesh;
+	NavMesh_create(&mesh, buf, sz);
+	NavMeshQuery query;
+	NavMeshQuery_create(&query, mesh, 2048);
+	NavStatus status;
+	//int foundPath = 0;
+	NavPoint spos = { 74.16, 6.88, 14.21 }; //77.5, 6.064272, 14.65
+	//NavPoint spos = { 75.36,6.55,12.47 };
+	NavPoint epos = { 75.36, 1.18, 3.45 };
+	//NavPoint epos = { 75.36,1.04,4.75 };
+	int pathCount = 0;
+	NavPoint* path;
+	status = NavMeshQuery_findStraightPath(query, spos, epos, &path, &pathCount);
+	if (!NavStatus_succeed(status)) {
+		fprintf(stderr, "convert error!!\n");
+		return false;
+	}
+	printf("pathCount = %d", pathCount);
+	return true;
+}
+
 int main(int argc, const char **argv) {
 	if (argc < 2) {
 		fprintf(stderr, "Usage: ./Convertor clientMesh serverMesh\n");
@@ -232,6 +257,8 @@ int main(int argc, const char **argv) {
 	UnityNavMeshLoader loader;
 	loader.load(clientMesh);
 	saveAll(serverMesh, loader.getNavMesh());
+	//testOffMesh(serverMesh);
+	//return 0;
 	if (!verify(serverMesh)) {
 		fprintf(stderr, "\033[40;31mconvert NavMesh %s error\033[0m\n", clientMesh);
 		return -1;

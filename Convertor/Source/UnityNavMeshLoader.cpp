@@ -323,7 +323,7 @@ bool addTile(AssetMeshHeader *header, dtParam *param, dtNavMesh *mesh) {
 	const int offMeshVertsBase = header->vertCount;
 	const int offMeshPolyBase = header->polyCount;
 
-	memcpy(navVerts, param->verts, dtAlign4(sizeof(float)) * 3 * hd->vertCount);
+	memcpy(navVerts, param->verts, dtAlign4(sizeof(float)) * 3 * header->vertCount);
 	// Off-mesh link vertices.
 	int n = 0;
 	for (unsigned int i = 0; i < offMeshConCount; ++i)
@@ -341,7 +341,7 @@ bool addTile(AssetMeshHeader *header, dtParam *param, dtNavMesh *mesh) {
 
 	// Store polygons
 	// Mesh polys
-	for (int i = 0; i < hd->polyCount; ++i)
+	for (int i = 0; i < header->polyCount; ++i)
 	{
 		dtPoly* p = &navPolys[i];
 		AssetPoly *from = &param->polys[i];
@@ -412,8 +412,11 @@ bool addTile(AssetMeshHeader *header, dtParam *param, dtNavMesh *mesh) {
 			n++;
 		}
 	}
-
-	mesh->addTile(data, dataSize, DT_TILE_FREE_DATA, 0, 0);
+	dtStatus status = mesh->addTile(data, dataSize, DT_TILE_FREE_DATA, 0, 0);
+	if (dtStatusFailed(status)) {
+		fprintf(stderr, "addTile failed!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+		exit(-1);
+	}
 
 	dtFree(offMeshConClass);
 	return true;
@@ -468,6 +471,7 @@ void parseTile(dtNavMesh *mesh, const char *buf, int len, std::vector<OffMesh> *
 	d += headerSize;
 	float *navVerts = (float *)d; d += vertsSize;
 	AssetPoly *navPolys = (AssetPoly *)d; d += polysSize;
+
 	AssetPolyDetail* navDMeshes = dtGetThenAdvanceBufferPointer<AssetPolyDetail>(d, detailMeshesSize);
 	float* navDVerts = dtGetThenAdvanceBufferPointer<float>(d, detailVertsSize);
 	dtPolyDetailIndex* navDTris = dtGetThenAdvanceBufferPointer<dtPolyDetailIndex>(d, detailTrisSize);
@@ -500,7 +504,8 @@ bool UnityNavMeshLoader::load(std::string filepath) {
 	char *content;
 	int bufSize;
 	if (!readFile(filepath, content, bufSize)) {
-		return false;
+		fprintf(stderr, "can not open file %s\n", filepath.c_str());
+		exit(-1);
 	}
 	if (content[0] == '%') {
 		printf("begin processing text asset....\n");
@@ -563,7 +568,6 @@ bool UnityNavMeshLoader::loadText(const char *content, int bufSize) {
 		}
 		else if (strncmp(row, "m_LinkDirection: ", 17) == 0) {
 			sscanf(row + 17, "%u", &o.dir);
-			o.dir = 1U;
 			offmesh.push_back(o);
 		}
 		else {
@@ -647,7 +651,7 @@ bool UnityNavMeshLoader::loadBinary(const char *content, int bufSize) {
 		o.type = *(unsigned short *)(content + offset); offset += 2;
 		o.area = *(unsigned char *)(content + offset); offset += 1;
 		o.dir = *(unsigned char *)(content + offset); offset += 1;
-		o.dir = 1U;
+		//o.dir = 1U;
 		offmesh.push_back(o);
 	}
 
@@ -672,7 +676,7 @@ bool UnityNavMeshLoader::loadBinary(const char *content, int bufSize) {
 		parseTile(m_navMesh, content+index[i], length[i], &offmesh);
 	}
 	//setTileSize(m_navMesh);
-	printf("tileSize = %f, tsc/tiles = %d/%d\n", ts, tsc, m_maxTile);
+	printf("tileSize = %f, tsc/tiles = %d/%d, offmesh = %lu\n", ts, tsc, m_maxTile, offmesh.size());
 	
 	delete[] content;
 	content = NULL;
